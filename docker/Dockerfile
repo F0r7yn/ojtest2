@@ -10,6 +10,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # change apt-source to aliyun
 RUN sed -i s@/archive.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list \
     && apt-get clean \
+    && find /root/hznuoj -type f \( -name "*.sh" -o -path "*/docker/scripts/bin/*" \) -exec sed -i 's/\r$//' {} + \
     && cd /root/hznuoj/scripts \
     && bash install.sh \
     && cp /root/hznuoj/docker/docker_entry.sh /root/docker_entry.sh \
