@@ -99,6 +99,47 @@ echo <<<HTML
 <hr>
 HTML;
 
+if ($is_prompt_judge_submission && $show_prompt_submission) {
+    $prompt_text = isset($prompt_submission['prompt']) ? htmlentities($prompt_submission['prompt'], ENT_QUOTES, "UTF-8") : "";
+    $prompt_length = isset($prompt_submission['prompt_length']) ? intval($prompt_submission['prompt_length']) : 0;
+    $problem_standard_length = 200;
+    if (isset($prompt_submission['problem_standard_length']) && intval($prompt_submission['problem_standard_length']) > 0) {
+        $problem_standard_length = intval($prompt_submission['problem_standard_length']);
+    }
+    $generated_code = isset($prompt_submission['generated_code']) ? htmlentities($prompt_submission['generated_code'], ENT_QUOTES, "UTF-8") : "";
+    $deepseek_status = isset($prompt_submission['deepseek_status']) ? htmlentities($prompt_submission['deepseek_status'], ENT_QUOTES, "UTF-8") : "UNKNOWN";
+    $model_name = isset($prompt_submission['model_name']) ? htmlentities($prompt_submission['model_name'], ENT_QUOTES, "UTF-8") : "";
+    $prompt_score = isset($prompt_submission['score']) ? intval($prompt_submission['score']) : 0;
+
+    $deepseek_error = "";
+    if (!empty($prompt_submission['deepseek_error'])) {
+        if (HAS_PRI("enter_admin_page")) {
+            $deepseek_error = htmlentities($prompt_submission['deepseek_error'], ENT_QUOTES, "UTF-8");
+        } else {
+            $deepseek_error = "DeepSeek code generation failed. Please try again later.";
+        }
+    }
+
+    echo "<div class='am-panel am-panel-default'>";
+    echo "<div class='am-panel-hd'><b>Prompt Judge</b></div>";
+    echo "<div class='am-panel-bd'>";
+    echo "<p><b>DeepSeek Status:</b> <span class='am-badge am-badge-secondary'>{$deepseek_status}</span></p>";
+    echo "<p><b>Model:</b> {$model_name}</p>";
+    echo "<p><b>Prompt Length:</b> {$prompt_length}</p>";
+    echo "<p><b>Standard Length:</b> {$problem_standard_length}</p>";
+    echo "<p><b>Prompt Score:</b> <span class='am-badge am-badge-primary'>{$prompt_score}</span></p>";
+    echo "<p><b>Student Prompt:</b></p>";
+    echo "<pre style='background-color: transparent;'><code style='background-color: transparent;'>{$prompt_text}</code></pre>";
+    echo "<p><b>DeepSeek Generated Code:</b></p>";
+    echo "<pre style='background-color: transparent;'><code style='background-color: transparent;'>{$generated_code}</code></pre>";
+    if ($deepseek_error !== "") {
+        echo "<p><b>DeepSeek Error:</b></p>";
+        echo "<pre style='background-color: transparent;'><code style='background-color: transparent;'>{$deepseek_error}</code></pre>";
+    }
+    echo "</div>";
+    echo "</div>";
+}
+
 $brush=strtolower($language_name[$slanguage]);
 if ($brush=='pascal') $brush='delphi';
 if ($brush=='obj-c') $brush='c';

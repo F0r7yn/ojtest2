@@ -4,15 +4,13 @@
 * by yybird
 * @2016.06.27
 **/
-?>
-
-<?php
 $cache_time = 1;
 $OJ_CACHE_SHARE = false;
 require_once('./include/cache_start.php');
 require_once('./include/db_info.inc.php');
 require_once('./include/const.inc.php');
 require_once("./include/my_func.inc.php");
+require_once("./include/prompt_judge.inc.php");
 require_once('./include/setlang.php');
 $view_title = $MSG_SUBMIT;
 
@@ -65,7 +63,16 @@ SQL;
 }
 /* 判断该用户是否有查看该题目权限 end */
 
-$sample_sql="select sample_input,sample_output,problem_id from problem where problem_id = $id";
+$problem_has_type = problem_table_has_column('problem_type');
+$problem_has_standard_length = problem_table_has_column('standard_length');
+$sample_fields = "sample_input,sample_output,problem_id";
+if ($problem_has_type) {
+    $sample_fields .= ",problem_type";
+}
+if ($problem_has_standard_length) {
+    $sample_fields .= ",standard_length";
+}
+$sample_sql="select ".$sample_fields." from problem where problem_id = $id";
 
 } else if (isset($_GET['cid']) && isset($_GET['pid'])) { // 如果提交的是比赛中的题目
 
@@ -97,7 +104,16 @@ if ($error_flag) {
 }
 /* 判断是否有错误 end */
 
-$sample_sql="select sample_input,sample_output,problem_id from problem where problem_id in (select problem_id from contest_problem where contest_id=$cid and num=$pid)";
+$problem_has_type = isset($problem_has_type) ? $problem_has_type : problem_table_has_column('problem_type');
+$problem_has_standard_length = isset($problem_has_standard_length) ? $problem_has_standard_length : problem_table_has_column('standard_length');
+$sample_fields = "sample_input,sample_output,problem_id";
+if ($problem_has_type) {
+    $sample_fields .= ",problem_type";
+}
+if ($problem_has_standard_length) {
+    $sample_fields .= ",standard_length";
+}
+$sample_sql="select ".$sample_fields." from problem where problem_id in (select problem_id from contest_problem where contest_id=$cid and num=$pid)";
 
 } else {
     $view_errors=  "<h2>No Such Problem!</h2>";
@@ -106,6 +122,8 @@ $sample_sql="select sample_input,sample_output,problem_id from problem where pro
 }
 
 $view_src="";
+$problem_type=0;
+$prompt_standard_length = 200;
 if(isset($_GET['sid'])){
     $sid=intval($_GET['sid']);
     $ok = canSeeSource($sid);
@@ -119,7 +137,7 @@ if(isset($_GET['sid'])){
     }
 
 }
-$problem_id=$id;
+$problem_id=isset($id)?$id:0;
 $view_sample_input="1 2";
 $view_sample_output="3";
 if(isset($sample_sql)){
@@ -129,6 +147,14 @@ if(isset($sample_sql)){
     $view_sample_input=$row[0];
     $view_sample_output=$row[1];
     $problem_id=$row[2];
+    $col = 3;
+    if (!empty($problem_has_type) && isset($row[$col])) {
+        $problem_type=intval($row[$col]);
+        $col++;
+    }
+    if (!empty($problem_has_standard_length) && isset($row[$col]) && intval($row[$col]) > 0) {
+        $prompt_standard_length = intval($row[$col]);
+    }
     $result->free();
 }
 

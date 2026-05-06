@@ -112,6 +112,20 @@
           <label class="radio-inline"><input type="radio" name="spj" value="1">Y</label>
         </div>
       </div>
+      <div class="form-group">
+        <label for="" class="col-sm-2 control-label">Problem Type</label>
+        <div class="col-sm-10">
+          <label class="radio-inline"><input type="radio" name="problem_type" value="0" checked>Normal</label>
+          <label class="radio-inline"><input type="radio" name="problem_type" value="1">Prompt Judge</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="" class="col-sm-2 control-label">Standard Length</label>
+        <div class="col-sm-10">
+          <input class="form-control" type="text" name="standard_length" value="200">
+          <small>Only used for Prompt Judge. Default 200.</small>
+        </div>
+      </div>
       <hr/>
       <div class="form-group">
         <label for="" class="col-sm-2 control-label">Author</label>

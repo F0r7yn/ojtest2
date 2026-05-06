@@ -651,6 +651,8 @@ CREATE TABLE `problem` (
   `tag2` varchar(250) DEFAULT NULL,
   `tag3` varchar(250) DEFAULT NULL,
   `problemset` varchar(255) DEFAULT NULL,
+  `problem_type` tinyint(4) NOT NULL DEFAULT '0' COMMENT '0=normal,1=prompt',
+  `standard_length` int(11) NOT NULL DEFAULT '200' COMMENT 'prompt judge standard length',
   PRIMARY KEY (`problem_id`),
   UNIQUE KEY `problem_id` (`problem_id`) USING BTREE,
   KEY `spj` (`problemset`,`defunct`,`spj`,`problem_id`) USING BTREE,
@@ -664,7 +666,7 @@ CREATE TABLE `problem` (
 
 LOCK TABLES `problem` WRITE;
 /*!40000 ALTER TABLE `problem` DISABLE KEYS */;
-INSERT INTO `problem` VALUES (1000,'A+B','1','1','1',NULL,NULL,'0','','','','2024-01-29 14:47:02',1,256,'Y',1,1,0,NULL,100.00,NULL,NULL,NULL,'default'),(1001,'A1','','','',NULL,NULL,'0','','','','2024-02-04 20:31:17',1,256,'Y',0,0,0,NULL,100.00,NULL,NULL,NULL,'default'),(1002,'A2','','','',NULL,NULL,'0','','','','2024-02-02 18:04:24',1,256,'Y',0,0,0,NULL,100.00,NULL,NULL,NULL,'default'),(1003,'A3','','','',NULL,NULL,'0','','','','2024-01-29 21:17:43',1,256,'Y',0,0,0,NULL,100.00,NULL,NULL,NULL,'default');
+INSERT INTO `problem` VALUES (1000,'A+B','1','1','1',NULL,NULL,'0','','','','2024-01-29 14:47:02',1,256,'Y',1,1,0,NULL,100.00,NULL,NULL,NULL,'default',0,200),(1001,'A1','','','',NULL,NULL,'0','','','','2024-02-04 20:31:17',1,256,'Y',0,0,0,NULL,100.00,NULL,NULL,NULL,'default',0,200),(1002,'A2','','','',NULL,NULL,'0','','','','2024-02-02 18:04:24',1,256,'Y',0,0,0,NULL,100.00,NULL,NULL,NULL,'default',0,200),(1003,'A3','','','',NULL,NULL,'0','','','','2024-01-29 21:17:43',1,256,'Y',0,0,0,NULL,100.00,NULL,NULL,NULL,'default',0,200);
 /*!40000 ALTER TABLE `problem` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -917,6 +919,36 @@ LOCK TABLES `solution_video_watch_log` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `prompt_submission`
+--
+
+DROP TABLE IF EXISTS `prompt_submission`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `prompt_submission` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `solution_id` int(11) DEFAULT NULL,
+  `problem_id` int(11) NOT NULL,
+  `user_id` varchar(48) NOT NULL,
+  `contest_id` int(11) DEFAULT NULL,
+  `prompt` text NOT NULL,
+  `prompt_length` int(11) NOT NULL,
+  `generated_code` mediumtext,
+  `deepseek_status` varchar(32) NOT NULL DEFAULT 'PENDING',
+  `deepseek_error` text,
+  `model_name` varchar(128) DEFAULT NULL,
+  `score` int(11) NOT NULL DEFAULT '0',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `solution_id` (`solution_id`),
+  KEY `problem_id` (`problem_id`),
+  KEY `user_id` (`user_id`),
+  KEY `contest_id` (`contest_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `source_code`
 --
 
@@ -1115,6 +1147,7 @@ CREATE TABLE `users` (
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
 INSERT INTO `users` VALUES ('admin','','temp@temp.com',1,1,'N','::1','2019-03-12 16:34:09',1,NULL,1,'3h3WmOGmnb9jZpHcKBU3t+VpcJFhYjQx','2019-03-12 16:34:09','','admin','','其它','斗之气五段',100.00,'#b6b6b6',NULL,NULL,NULL,NULL,NULL,0,0,NULL);
+INSERT INTO `users` (`user_id`,`email`,`ip`,`accesstime`,`password`,`reg_time`,`nick`,`school`) VALUES ('test','test@temp.com','::1','2026-05-01 00:00:00','cX954biYFEtBFI90OoC0FF7QwbdmM2M5','2026-05-01 00:00:00','test','');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1143,6 +1176,7 @@ CREATE TABLE `users_cache` (
 LOCK TABLES `users_cache` WRITE;
 /*!40000 ALTER TABLE `users_cache` DISABLE KEYS */;
 INSERT INTO `users_cache` VALUES ('','',0000000001,0000000001,NULL,NULL),('admin','',0000000001,0000000001,NULL,NULL);
+INSERT INTO `users_cache` (`user_id`,`class`,`AC_day`,`sub_day`,`activity`,`total_score`) VALUES ('test','',0000000001,0000000001,NULL,NULL);
 /*!40000 ALTER TABLE `users_cache` ENABLE KEYS */;
 UNLOCK TABLES;
 

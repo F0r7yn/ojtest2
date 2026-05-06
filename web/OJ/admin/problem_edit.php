@@ -1,4 +1,5 @@
 <?php
+@session_start();
 /**
  * This file is modified
  * by yybird
@@ -190,6 +191,32 @@ HTML;
           <label class="radio-inline"><input type="radio" name="spj" value="1" <?php if(!$add_problem_mod)echo $row->spj=="1"?"checked":""?>>Y</label>
         </div>
       </div>
+      <div class="form-group">
+        <label for="" class="col-sm-2 control-label">Problem Type</label>
+        <div class="col-sm-10">
+          <?php
+          $cur_problem_type = 0;
+          if (!$add_problem_mod && isset($row->problem_type)) {
+              $cur_problem_type = intval($row->problem_type) === 1 ? 1 : 0;
+          }
+          ?>
+          <label class="radio-inline"><input type="radio" name="problem_type" value="0" <?php echo $cur_problem_type === 0 ? "checked" : ""; ?>>Normal</label>
+          <label class="radio-inline"><input type="radio" name="problem_type" value="1" <?php echo $cur_problem_type === 1 ? "checked" : ""; ?>>Prompt Judge</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="" class="col-sm-2 control-label">Standard Length</label>
+        <div class="col-sm-10">
+          <?php
+          $cur_standard_length = 200;
+          if (!$add_problem_mod && isset($row->standard_length) && intval($row->standard_length) > 0) {
+              $cur_standard_length = intval($row->standard_length);
+          }
+          ?>
+          <input class="form-control" type="text" name="standard_length" value="<?php echo $cur_standard_length; ?>">
+          <small>Only used for Prompt Judge. Default 200.</small>
+        </div>
+      </div>
 
       <!-- tag -->
       <style>
@@ -367,6 +394,12 @@ if(isset($_POST['problem_id'])){
     if (strlen($author)>=2 && $author[strlen($author)-2] == ',') $author = substr($author, 0, strlen($author)-2);
     $source=$_POST['source'];
     $spj=$_POST['spj'];
+    $problem_type=isset($_POST['problem_type']) ? intval($_POST['problem_type']) : 0;
+    $problem_type = $problem_type === 1 ? 1 : 0;
+    $standard_length = isset($_POST['standard_length']) ? intval($_POST['standard_length']) : 200;
+    if ($standard_length <= 0) {
+        $standard_length = 200;
+    }
     //remove original samples
     $sql="SELECT COUNT(1) FROM problem_samples WHERE problem_id=$id";
     $original_sample_cnt=$mysqli->query($sql)->fetch_array()[0];
@@ -380,7 +413,7 @@ if(isset($_POST['problem_id'])){
         //echo "<pre>remove $path:$success</pre>";
     }
     if(isset($_POST['add_problem_mod'])){
-        $id=addproblem($problemset, $title, $time_limit, $memory_limit, $description, $input, $output, $hint, $author, $source, $spj, $OJ_DATA );
+        $id=addproblem($problemset, $title, $time_limit, $memory_limit, $description, $input, $output, $hint, $author, $source, $spj, $problem_type, $standard_length, $OJ_DATA );
         mkdir($OJ_DATA."/$id");
     }
     $sql="DELETE FROM problem_samples WHERE problem_id=$id";
@@ -461,7 +494,7 @@ SQL;
     }
     else{
         $sql="UPDATE `problem` set `problemset`='$problemset',`title`='$title',`time_limit`='$time_limit',`memory_limit`='$memory_limit',
-          `description`='$description',`input`='$input',`output`='$output',`hint`='$hint',author='$author',`source`='$source',`spj`=$spj,`in_date`=NOW()
+          `description`='$description',`input`='$input',`output`='$output',`hint`='$hint',author='$author',`source`='$source',`spj`=$spj,`problem_type`=$problem_type,`standard_length`=$standard_length,`in_date`=NOW()
           WHERE `problem_id`=$id";
         @$mysqli->query($sql) or die($mysqli->error);
         echo "Edit OK!";

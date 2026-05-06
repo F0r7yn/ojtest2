@@ -18,6 +18,8 @@
 
 if (isset($_GET['cid'])) require_once("contest_header.php");
 else require_once("header.php");
+$is_prompt_problem = isset($row->problem_type) && intval($row->problem_type) === OJ_PROBLEM_TYPE_PROMPT;
+$show_prompt_submit_notice = $is_prompt_problem && !HAS_PRI("enter_admin_page");
 
 //比赛期间暂时关闭
 if (!isset($_GET['cid']) && !HAS_PRI('enter_admin_page') && $OJ_FORBIDDEN) {
@@ -173,6 +175,12 @@ if ($show_tag && !isset($_GET['cid'])) {
 
         </div>
         <br/>
+
+        <?php if ($show_prompt_submit_notice): ?>
+        <div class="am-alert am-alert-danger" style="font-size: 16px; font-weight: 600; text-align: center;">
+            <?php echo get_prompt_submit_notice(); ?>
+        </div>
+        <?php endif; ?>
 
         <!-- 提交等按钮 start -->
         <div class="am-text-center">

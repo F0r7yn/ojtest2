@@ -50,6 +50,12 @@
   if (strlen($author)>=2 && $author[strlen($author)-2] == ',') $author = substr($author, 0, strlen($author)-2);
   $source = $_POST ['source'];
   $spj = $_POST ['spj'];
+  $problem_type = isset($_POST['problem_type']) ? intval($_POST['problem_type']) : 0;
+  $problem_type = $problem_type === 1 ? 1 : 0;
+  $standard_length = isset($_POST['standard_length']) ? intval($_POST['standard_length']) : 200;
+  if ($standard_length <= 0) {
+    $standard_length = 200;
+  }
   if (get_magic_quotes_gpc ()) {
     $title = stripslashes ( $title);
     $problemset = stripslashes($problemset);
@@ -68,7 +74,7 @@
     $source = stripslashes ( $source );
   }
   //echo "->".$OJ_DATA."<-"; 
-  $pid=addproblem($problemset, $title, $time_limit, $memory_limit, $description, $input, $output, $sample_input, $sample_output, $hint, $author, $source, $spj, $OJ_DATA );
+  $pid=addproblem($problemset, $title, $time_limit, $memory_limit, $description, $input, $output, $hint, $author, $source, $spj, $problem_type, $standard_length, $OJ_DATA );
   $basedir = "$OJ_DATA/$pid";
   mkdir ( $basedir );
   if(strlen($sample_output)&&!strlen($sample_input)) $sample_input="0";
