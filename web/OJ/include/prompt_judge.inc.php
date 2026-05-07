@@ -21,7 +21,7 @@ if (!defined('PROMPT_SUBMIT_COOLDOWN_SECONDS')) {
 }
 
 function get_prompt_submit_notice() {
-    return "&#x63D0;&#x793A;&#x8BCD;&#x9898;&#x578B;&#x6BCF; 5 &#x5206;&#x949F;&#x4EC5;&#x80FD;&#x63D0;&#x4EA4; 1 &#x6B21;&#x3002;&#x8BF7;&#x5148;&#x7528; AI &#x68C0;&#x67E5;&#x63D0;&#x793A;&#x8BCD;&#x662F;&#x5426;&#x5B8C;&#x6574;&#x3001;&#x53EF;&#x5B9E;&#x73B0;&#xFF0C;&#x518D;&#x63D0;&#x4EA4;&#x5230; OJ&#x3002;";
+    return "&#x91CD;&#x8981;&#x63D0;&#x793A;&#xFF1A;&#x666E;&#x901A;&#x7528;&#x6237; Prompt &#x9898;&#x578B;&#x6BCF;&#x4E94;&#x5206;&#x949F;&#x53EA;&#x80FD;&#x63D0;&#x4EA4;&#x4E00;&#x6B21;&#x3002;&#x8BF7;&#x5148;&#x786E;&#x8BA4;&#x63D0;&#x793A;&#x8BCD;&#x5B8C;&#x6574;&#x3001;&#x53EF;&#x5B9E;&#x73B0;&#xFF0C;&#x518D;&#x63D0;&#x4EA4;&#x5230; OJ&#x3002;";
 }
 
 function problem_table_has_column($column_name) {

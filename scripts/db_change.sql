@@ -71,3 +71,6 @@ WHERE NOT EXISTS (SELECT 1 FROM `users` WHERE `user_id`='test');
 INSERT INTO `users_cache` (`user_id`,`class`,`AC_day`,`sub_day`,`activity`,`total_score`)
 SELECT 'test','',0000000001,0000000001,NULL,NULL
 WHERE NOT EXISTS (SELECT 1 FROM `users_cache` WHERE `user_id`='test');
+
+ALTER TABLE `solution`
+MODIFY COLUMN `pass_rate` decimal(3,2) unsigned NOT NULL DEFAULT '0.00';

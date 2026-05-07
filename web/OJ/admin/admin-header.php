@@ -65,6 +65,7 @@
           $html_li = "";
           if ($can_see_problem) {
             $html_li .= "<li><a href='/OJ/admin/problem_edit.php?new_problem'>Add Problem</a></li>";
+            $html_li .= "<li><a href='/OJ/admin/problem_edit.php?new_problem=1&problem_type=prompt'>Prompt Problem</a></li>";
             $html_li .= "<li><a href='/OJ/admin/problem_list.php'>Problem List</a></li>";
           }
           // if (HAS_PRI("manage_gptcode")) {

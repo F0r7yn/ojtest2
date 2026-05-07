@@ -177,7 +177,8 @@ if ($show_tag && !isset($_GET['cid'])) {
         <br/>
 
         <?php if ($show_prompt_submit_notice): ?>
-        <div class="am-alert am-alert-danger" style="font-size: 16px; font-weight: 600; text-align: center;">
+        <div class="am-alert am-alert-danger" role="alert" style="font-size: 18px; font-weight: 700; text-align: center; white-space: nowrap; overflow-x: auto; border: 2px solid #dd514c; border-left-width: 8px; padding: 14px 18px; margin: 16px auto;">
+            <i class="am-icon-exclamation-triangle"></i>
             <?php echo get_prompt_submit_notice(); ?>
         </div>
         <?php endif; ?>

@@ -74,15 +74,13 @@
         <input type="hidden" id="source" name="source">
         <?php else: ?>
         <?php if ($show_prompt_submit_notice): ?>
-        <div class="am-alert am-alert-danger" style="font-size: 16px; font-weight: 600;">
+        <div class="am-alert am-alert-danger" role="alert" style="font-size: 18px; font-weight: 700; text-align: center; white-space: nowrap; overflow-x: auto; border: 2px solid #dd514c; border-left-width: 8px; padding: 14px 18px; margin: 16px auto;">
+          <i class="am-icon-exclamation-triangle"></i>
           <?php echo get_prompt_submit_notice(); ?>
         </div>
         <?php endif; ?>
         <div class="am-alert am-alert-warning">
-          本题接收的是提示词（Prompt），不是源代码。<br>
-          系统会将你的提示词发送给 DeepSeek，生成 Python 3 代码，并使用隐藏测试数据评测生成代码。<br>
-          只有通过全部隐藏测试才算通过。<br>
-          通过后，提示词得分基于“规范化提示词长度”和“题目标准长度”计算（越短越好）。
+          &#x672C;&#x9898;&#x63A5;&#x6536;&#x7684;&#x63D0;&#x793A;&#x8BCD;&#x5C06;&#x4F1A;&#x53D1;&#x9001;&#x7ED9; DeepSeek &#x751F;&#x6210;&#x5BF9;&#x5E94;&#x8BED;&#x8A00;&#x7684;&#x4EE3;&#x7801;&#xFF0C;&#x63D0;&#x793A;&#x8BCD;&#x8D8A;&#x7CBE;&#x70BC;&#x8D8A;&#x597D;&#x3002;
         </div>
         <div class="am-form-group">
           <label for="prompt">提示词</label>

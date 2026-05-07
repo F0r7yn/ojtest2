@@ -1,0 +1,254 @@
+#!/usr/bin/env php
+<?php
+
+$_SERVER['DOCUMENT_ROOT'] = '/var/www/web';
+require_once('/var/www/web/OJ/include/static.php');
+
+const RESULT_PENDING = 0;
+const RESULT_REJUDGE = 1;
+const RESULT_COMPILING = 2;
+const RESULT_RUNNING = 3;
+const RESULT_ACCEPTED = 4;
+const RESULT_PRESENTATION_ERROR = 5;
+const RESULT_WRONG_ANSWER = 6;
+const RESULT_TIME_LIMIT = 7;
+const RESULT_RUNTIME_ERROR = 10;
+const RESULT_COMPILE_ERROR = 11;
+
+$dataRoot = getenv('OJ_DATA') ?: (isset($OJ_DATA) ? $OJ_DATA : '/var/hznuoj/data');
+$pollSeconds = intval(getenv('MINI_JUDGED_POLL_SECONDS') ?: '2');
+
+function db_connect() {
+    global $DB_HOST, $DB_USER, $DB_PASS, $DB_NAME;
+    $mysqli = new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);
+    if ($mysqli->connect_errno) {
+        throw new RuntimeException('DB connect failed: ' . $mysqli->connect_error);
+    }
+    $mysqli->set_charset('utf8');
+    $mysqli->query("SET time_zone = '+8:00'");
+    return $mysqli;
+}
+
+function write_info($mysqli, $table, $solutionId, $message) {
+    $solutionId = intval($solutionId);
+    $message = $mysqli->real_escape_string($message);
+    $mysqli->query("REPLACE INTO `$table` (`solution_id`, `error`) VALUES ($solutionId, '$message')");
+}
+
+function finish_solution($mysqli, $solutionId, $result, $timeMs, $memoryKb, $passRate, $runtimeInfo = null, $compileInfo = null) {
+    $solutionId = intval($solutionId);
+    $result = intval($result);
+    $timeMs = intval($timeMs);
+    $memoryKb = intval($memoryKb);
+    $passRate = max(0, min(1, floatval($passRate)));
+    $updated = $mysqli->query("UPDATE solution SET result=$result, time=$timeMs, memory=$memoryKb, pass_rate=$passRate, judgetime=NOW() WHERE solution_id=$solutionId");
+    if (!$updated) {
+        error_log('[mini_judged] solution update failed: ' . $mysqli->error);
+    }
+    if ($runtimeInfo !== null) {
+        write_info($mysqli, 'runtimeinfo', $solutionId, $runtimeInfo);
+    }
+    if ($compileInfo !== null) {
+        write_info($mysqli, 'compileinfo', $solutionId, $compileInfo);
+    }
+}
+
+function run_command($command, $stdin, $cwd, $timeoutSeconds) {
+    $descriptorSpec = array(
+        0 => array('pipe', 'r'),
+        1 => array('pipe', 'w'),
+        2 => array('pipe', 'w'),
+    );
+    $start = microtime(true);
+    $process = proc_open('timeout ' . intval($timeoutSeconds) . 's ' . $command, $descriptorSpec, $pipes, $cwd);
+    if (!is_resource($process)) {
+        return array('code' => 127, 'stdout' => '', 'stderr' => 'Failed to start process', 'time_ms' => 0);
+    }
+    fwrite($pipes[0], $stdin);
+    fclose($pipes[0]);
+    $stdout = stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[2]);
+    $code = proc_close($process);
+    $timeMs = intval((microtime(true) - $start) * 1000);
+    return array('code' => $code, 'stdout' => $stdout, 'stderr' => $stderr, 'time_ms' => $timeMs);
+}
+
+function normalized_exact($text) {
+    $text = str_replace("\r\n", "\n", $text);
+    $text = str_replace("\r", "\n", $text);
+    return rtrim($text);
+}
+
+function normalized_loose($text) {
+    return preg_replace('/\s+/', ' ', trim($text));
+}
+
+function testcase_pairs($problemId) {
+    global $dataRoot;
+    $dir = rtrim($dataRoot, '/') . '/' . intval($problemId);
+    if (!is_dir($dir)) {
+        return array();
+    }
+    $inputs = glob($dir . '/*.in');
+    natsort($inputs);
+    $pairs = array();
+    foreach ($inputs as $input) {
+        $output = substr($input, 0, -3) . '.out';
+        if (is_file($output)) {
+            $pairs[] = array($input, $output);
+        }
+    }
+    return $pairs;
+}
+
+function build_command($language, $workDir, $source) {
+    $source = str_replace("\r\n", "\n", $source);
+    switch (intval($language)) {
+        case 0:
+        case 13:
+            file_put_contents($workDir . '/Main.c', $source);
+            return array(
+                'compile' => 'gcc Main.c -O2 -std=c11 -DONLINE_JUDGE -lm -o Main',
+                'run' => './Main',
+                'compile_required' => true,
+            );
+        case 1:
+        case 14:
+        case 19:
+        case 20:
+        case 21:
+            file_put_contents($workDir . '/Main.cc', $source);
+            $std = intval($language) === 19 ? 'c++14' : (intval($language) === 20 ? 'c++17' : (intval($language) === 21 ? 'c++20' : 'c++11'));
+            return array(
+                'compile' => 'g++ Main.cc -O2 -std=' . $std . ' -DONLINE_JUDGE -lm -o Main',
+                'run' => './Main',
+                'compile_required' => true,
+            );
+        case 5:
+            file_put_contents($workDir . '/Main.sh', $source);
+            return array('compile' => '', 'run' => 'bash Main.sh', 'compile_required' => false);
+        case 7:
+            file_put_contents($workDir . '/Main.php', $source);
+            return array('compile' => '', 'run' => 'php Main.php', 'compile_required' => false);
+        case 18:
+            file_put_contents($workDir . '/Main.py', $source);
+            return array('compile' => '', 'run' => 'python3 Main.py', 'compile_required' => false);
+        default:
+            return null;
+    }
+}
+
+function judge_one($mysqli, $row) {
+    $solutionId = intval($row['solution_id']);
+    $problemId = intval($row['problem_id']);
+    $language = intval($row['language']);
+    $timeLimit = max(1, intval($row['time_limit']));
+
+    $mysqli->query("UPDATE solution SET result=" . RESULT_COMPILING . ", judgetime=NOW() WHERE solution_id=$solutionId");
+
+    $sourceRes = $mysqli->query("SELECT source FROM source_code WHERE solution_id=$solutionId");
+    $sourceRow = $sourceRes ? $sourceRes->fetch_assoc() : null;
+    if ($sourceRes) {
+        $sourceRes->free();
+    }
+    if (!$sourceRow) {
+        finish_solution($mysqli, $solutionId, RESULT_COMPILE_ERROR, 0, 0, 0, null, 'Missing source_code row');
+        return;
+    }
+
+    $workDir = '/tmp/mini_judge/' . $solutionId;
+    if (is_dir($workDir)) {
+        run_command('rm -rf ' . escapeshellarg($workDir), '', '/tmp', 5);
+    }
+    mkdir($workDir, 0777, true);
+
+    $cmd = build_command($language, $workDir, $sourceRow['source']);
+    if ($cmd === null) {
+        finish_solution($mysqli, $solutionId, RESULT_COMPILE_ERROR, 0, 0, 0, null, 'Unsupported language id: ' . $language);
+        return;
+    }
+
+    if ($cmd['compile_required']) {
+        $compile = run_command($cmd['compile'], '', $workDir, 20);
+        if ($compile['code'] !== 0) {
+            finish_solution($mysqli, $solutionId, RESULT_COMPILE_ERROR, 0, 0, 0, null, $compile['stderr'] . $compile['stdout']);
+            return;
+        }
+    }
+
+    $pairs = testcase_pairs($problemId);
+    if (count($pairs) === 0) {
+        finish_solution($mysqli, $solutionId, RESULT_RUNTIME_ERROR, 0, 0, 0, 'No test data found for problem ' . $problemId);
+        return;
+    }
+
+    $mysqli->query("UPDATE solution SET result=" . RESULT_RUNNING . " WHERE solution_id=$solutionId");
+    $maxTime = 0;
+    $passed = 0;
+    $firstInfo = '';
+    $finalResult = RESULT_ACCEPTED;
+
+    foreach ($pairs as $index => $pair) {
+        $input = file_get_contents($pair[0]);
+        $expected = file_get_contents($pair[1]);
+        $run = run_command($cmd['run'], $input, $workDir, $timeLimit + 1);
+        $maxTime = max($maxTime, $run['time_ms']);
+
+        if ($run['code'] === 124) {
+            $finalResult = RESULT_TIME_LIMIT;
+            $firstInfo = "Test #" . ($index + 1) . " time limit exceeded.";
+            break;
+        }
+        if ($run['code'] !== 0) {
+            $finalResult = RESULT_RUNTIME_ERROR;
+            $firstInfo = "Test #" . ($index + 1) . " runtime error, exit code {$run['code']}.\n" . $run['stderr'];
+            break;
+        }
+
+        if (normalized_exact($run['stdout']) === normalized_exact($expected)) {
+            $passed++;
+            continue;
+        }
+        if (normalized_loose($run['stdout']) === normalized_loose($expected)) {
+            $finalResult = RESULT_PRESENTATION_ERROR;
+        } else {
+            $finalResult = RESULT_WRONG_ANSWER;
+        }
+        $firstInfo = "Test #" . ($index + 1) . " failed.\nInput:\n" . $input . "\nExpected:\n" . $expected . "\nOutput:\n" . $run['stdout'] . "\nStderr:\n" . $run['stderr'];
+        break;
+    }
+
+    if ($finalResult === RESULT_ACCEPTED) {
+        $passed = count($pairs);
+    }
+    $passRate = count($pairs) > 0 ? $passed / count($pairs) : 0;
+    finish_solution($mysqli, $solutionId, $finalResult, $maxTime, 0, $passRate, $firstInfo !== '' ? $firstInfo : null);
+    run_command('rm -rf ' . escapeshellarg($workDir), '', '/tmp', 5);
+}
+
+while (true) {
+    try {
+        $mysqli = db_connect();
+        $sql = "SELECT s.solution_id, s.problem_id, s.language, p.time_limit, p.memory_limit
+                FROM solution s
+                JOIN problem p ON p.problem_id = s.problem_id
+                WHERE s.result IN (" . RESULT_PENDING . "," . RESULT_REJUDGE . ")
+                   OR (s.result IN (" . RESULT_COMPILING . "," . RESULT_RUNNING . ") AND s.judgetime < DATE_SUB(NOW(), INTERVAL 10 MINUTE))
+                ORDER BY s.solution_id ASC
+                LIMIT 1";
+        $res = $mysqli->query($sql);
+        $row = $res ? $res->fetch_assoc() : null;
+        if ($res) {
+            $res->free();
+        }
+        if ($row) {
+            judge_one($mysqli, $row);
+        }
+        $mysqli->close();
+    } catch (Throwable $e) {
+        error_log('[mini_judged] ' . $e->getMessage());
+    }
+    sleep($pollSeconds);
+}

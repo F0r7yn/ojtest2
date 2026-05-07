@@ -19,6 +19,13 @@ $add_problem_mod=false;
 if(isset($_GET['new_problem'])){
     $add_problem_mod=true;
 }
+$default_problem_type = 0;
+if ($add_problem_mod && isset($_GET['problem_type'])) {
+    $requested_problem_type = strtolower(trim($_GET['problem_type']));
+    if ($requested_problem_type === "1" || $requested_problem_type === "prompt") {
+        $default_problem_type = 1;
+    }
+}
 if(!$add_problem_mod){
     if(isset($_GET['id'])) {
         $pid=intval($_GET['id']);
@@ -46,7 +53,7 @@ if(!$add_problem_mod){
 <?php if (isset($_GET['id']) || $add_problem_mod): ?>
   <title><?php
       if($add_problem_mod){
-          echo "Add New Problem";
+          echo $default_problem_type === 1 ? "Add New Prompt Problem" : "Add New Problem";
       }
       else{
           echo "Edit Problem:".$pid;
@@ -56,7 +63,7 @@ if(!$add_problem_mod){
     <h1>
         <?php
         if($add_problem_mod){
-            echo "Add New Problem";
+            echo $default_problem_type === 1 ? "Add New Prompt Problem" : "Add New Problem";
         }
         else{
             echo<<<HTML
@@ -191,32 +198,38 @@ HTML;
           <label class="radio-inline"><input type="radio" name="spj" value="1" <?php if(!$add_problem_mod)echo $row->spj=="1"?"checked":""?>>Y</label>
         </div>
       </div>
-      <div class="form-group">
-        <label for="" class="col-sm-2 control-label">Problem Type</label>
-        <div class="col-sm-10">
-          <?php
-          $cur_problem_type = 0;
-          if (!$add_problem_mod && isset($row->problem_type)) {
-              $cur_problem_type = intval($row->problem_type) === 1 ? 1 : 0;
-          }
-          ?>
-          <label class="radio-inline"><input type="radio" name="problem_type" value="0" <?php echo $cur_problem_type === 0 ? "checked" : ""; ?>>Normal</label>
-          <label class="radio-inline"><input type="radio" name="problem_type" value="1" <?php echo $cur_problem_type === 1 ? "checked" : ""; ?>>Prompt Judge</label>
+      <?php
+      $cur_problem_type = $default_problem_type;
+      if (!$add_problem_mod && isset($row->problem_type)) {
+          $cur_problem_type = intval($row->problem_type) === 1 ? 1 : 0;
+      }
+      $cur_standard_length = 200;
+      if (!$add_problem_mod && isset($row->standard_length) && intval($row->standard_length) > 0) {
+          $cur_standard_length = intval($row->standard_length);
+      }
+      ?>
+      <?php if ($add_problem_mod): ?>
+        <input type="hidden" name="problem_type" value="<?php echo $cur_problem_type; ?>">
+      <?php else: ?>
+        <div class="form-group">
+          <label for="" class="col-sm-2 control-label">Problem Type</label>
+          <div class="col-sm-10">
+            <label class="radio-inline"><input type="radio" name="problem_type" value="0" <?php echo $cur_problem_type === 0 ? "checked" : ""; ?>>Normal</label>
+            <label class="radio-inline"><input type="radio" name="problem_type" value="1" <?php echo $cur_problem_type === 1 ? "checked" : ""; ?>>Prompt Judge</label>
+          </div>
         </div>
-      </div>
-      <div class="form-group">
-        <label for="" class="col-sm-2 control-label">Standard Length</label>
-        <div class="col-sm-10">
-          <?php
-          $cur_standard_length = 200;
-          if (!$add_problem_mod && isset($row->standard_length) && intval($row->standard_length) > 0) {
-              $cur_standard_length = intval($row->standard_length);
-          }
-          ?>
-          <input class="form-control" type="text" name="standard_length" value="<?php echo $cur_standard_length; ?>">
-          <small>Only used for Prompt Judge. Default 200.</small>
+      <?php endif; ?>
+      <?php if (!$add_problem_mod || $cur_problem_type === 1): ?>
+        <div class="form-group">
+          <label for="" class="col-sm-2 control-label">Standard Length</label>
+          <div class="col-sm-10">
+            <input class="form-control" type="text" name="standard_length" value="<?php echo $cur_standard_length; ?>">
+            <small>Only used for Prompt Judge. Default 200.</small>
+          </div>
         </div>
-      </div>
+      <?php else: ?>
+        <input type="hidden" name="standard_length" value="200">
+      <?php endif; ?>
 
       <!-- tag -->
       <style>
