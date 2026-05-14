@@ -21,36 +21,45 @@ jobs:
         with:
             fetch-depth: 0
 
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-            node-version: 18.x
-
       - name: Check Version
         id: check_version
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ -f VERSION ]]; then
-            version=$(cat VERSION)
-            tags=$(git tag --list)
-            echo $tags
-            if [[ ! "$tags" =~ (^|[[:space:]])"$version"($|[[:space:]]) ]]; then
-              echo $version
+            version=$(tr -d '[:space:]' < VERSION)
+            if [[ "$version" == v* ]]; then
+              tag_exists=false
+              release_exists=false
+              if git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
+                tag_exists=true
+              fi
+              if gh release view "$version" >/dev/null 2>&1; then
+                release_exists=true
+              fi
+              echo "tag_exists=$tag_exists" >> "$GITHUB_OUTPUT"
+              echo "release_exists=$release_exists" >> "$GITHUB_OUTPUT"
+            fi
+            if [[ "$version" == v* ]] && { [[ "$tag_exists" == false ]] || [[ "$release_exists" == false ]]; }; then
               echo "tag=$version" >> "$GITHUB_OUTPUT"
             fi
           fi
 
       - name: Create Tag
-        if: ${{ startsWith(steps.check_version.outputs.tag, 'v') }}
+        if: ${{ startsWith(steps.check_version.outputs.tag, 'v') && steps.check_version.outputs.tag_exists != 'true' }}
+        env:
+          RELEASE_TAG: ${{ steps.check_version.outputs.tag }}
         run: |
-          git tag ${{ steps.check_version.outputs.tag }}
-          git push origin ${{ steps.check_version.outputs.tag }}
+          git tag "$RELEASE_TAG"
+          git push origin "refs/tags/$RELEASE_TAG"
 
       - name: Release
-        if: ${{ startsWith(steps.check_version.outputs.tag, 'v') }}
-        run: npx changelogithub
+        if: ${{ startsWith(steps.check_version.outputs.tag, 'v') && steps.check_version.outputs.release_exists != 'true' }}
         env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            RELEASE_TAG: ${{ steps.check_version.outputs.tag }}
+        run: gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG"
 
   release-docker-image:
       runs-on: ubuntu-latest
@@ -59,6 +68,8 @@ jobs:
       steps:
         - name: Checkout
           uses: actions/checkout@v4
+          with:
+              ref: ${{ needs.release_github_packages.outputs.tag }}
 
         - name: Set Tag
           id: get-tag
