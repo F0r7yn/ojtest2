@@ -17,12 +17,7 @@ apt-get update
 apt-get dist-upgrade -y
 apt-get install -y gnupg ca-certificates wget curl
 
-# Key: PHP repo
-apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 4F4EA0AAE5267A6C
-
-echo "deb http://ppa.launchpad.net/ondrej/php/ubuntu focal main" >/etc/apt/sources.list.d/php.list
-
-deps="apache2 php7.0 libapache2-mod-php7.0 php7.0-mysql php7.0-mbstring php7.0-gd php7.0-cli php-xml curl libcurl4 libcurl4-openssl-dev php7.0-curl"
+deps="apache2 php7.4 libapache2-mod-php7.4 php7.4-mysql php7.4-mbstring php7.4-gd php7.4-cli php7.4-xml curl libcurl4 libcurl4-openssl-dev php7.4-curl"
 
 apt-get update
 # shellcheck disable=SC2086
